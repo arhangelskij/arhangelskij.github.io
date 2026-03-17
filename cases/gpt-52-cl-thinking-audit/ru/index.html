@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Study: GPT-5.2 Thinking — Behavioral Audit</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0c0c0c;
+    --surface: #131313;
+    --surface2: #181818;
+    --border: #222;
+    --border2: #2a2a2a;
+    --accent: #35f1d2;
+    --accent-dim: rgba(33, 145, 121, 0.08);
+    --red: #ff4d4d;
+    --red-dim: rgba(255,77,77,0.08);
+    --blue: #5b9cf6;
+    --text: #e2e2dc;
+    --muted: #555;
+    --muted2: #888;
+    --mono: 'IBM Plex Mono', monospace;
+    --serif: 'Playfair Display', Georgia, serif;
+    --sans: 'Manrope', sans-serif;
+  }
+
+  html { background: var(--bg); }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* HEADER */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(12,12,12,0.97);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .header-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .header-sep { color: var(--border2); }
+  .header-ref {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+  .header-ref a {
+    color: var(--muted2);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border2);
+  }
+  .header-ref a:hover { color: var(--text); }
+
+  /* HERO */
+  .hero {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 72px 48px 56px;
+  }
+  .kicker {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .kicker::before {
+    content: '';
+    width: 28px; height: 1px;
+    background: var(--accent);
+    display: inline-block;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(34px, 5.5vw, 60px);
+    font-weight: 900;
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+  }
+  h1 em { font-style: italic; color: var(--accent); }
+
+  .hero-sub {
+    font-size: 16px;
+    font-weight: 300;
+    color: #999;
+    max-width: 560px;
+    line-height: 1.65;
+    margin-bottom: 40px;
+  }
+
+  .meta-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .meta-cell {
+    padding: 14px 20px;
+    border-right: 1px solid var(--border);
+    flex: 1;
+    min-width: 120px;
+  }
+  .meta-cell:last-child { border-right: none; }
+  .meta-key {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .meta-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  /* LAYOUT */
+  .body {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 48px 100px;
+  }
+
+  .divider { width: 100%; height: 1px; background: var(--border); }
+
+  /* SECTION */
+  .section { margin: 60px 0; }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  h2 {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-bottom: 20px;
+  }
+  p {
+    font-size: 15px;
+    color: #aaa;
+    margin-bottom: 14px;
+    font-weight: 300;
+  }
+  p strong { color: var(--text); font-weight: 600; }
+
+  /* ABSTRACT BOX */
+  .abstract {
+    margin: 48px 0;
+    padding: 36px 40px;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+  }
+  .abstract-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .abstract p {
+    font-size: 15px;
+    color: #bbb;
+    margin: 0;
+    line-height: 1.75;
+  }
+  .abstract p + p { margin-top: 12px; }
+
+  /* PATTERN MAP */
+  .pattern-map {
+    margin: 32px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .pm-row {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    align-items: stretch;
+  }
+  .pm-id {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    padding: 16px 14px;
+    width: 52px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.05em;
+  }
+  .pm-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    padding: 16px;
+    width: 210px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    line-height: 1.5;
+    word-break: break-word;
+    white-space: normal;
+  }
+  .pm-name.new {
+    color: var(--accent);
+  }
+  .pm-evidence {
+    font-size: 13px;
+    color: #888;
+    padding: 16px 20px;
+    flex: 1;
+    line-height: 1.6;
+    min-width: 0;
+  }
+  .pm-evidence strong { color: #bbb; font-weight: 500; }
+  .pm-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    padding: 16px 14px;
+    border-left: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    width: 44px;
+    flex-shrink: 0;
+    justify-content: center;
+  }
+  .pm-count.high { color: var(--red); }
+  .pm-count.mid { color: var(--accent); }
+
+  /* PULL QUOTE */
+  .pull-quote {
+    margin: 48px 0;
+    padding: 32px 0 32px 32px;
+    border-left: 2px solid var(--accent);
+  }
+  .pull-quote p {
+    font-family: var(--serif);
+    font-size: 21px;
+    font-style: italic;
+    color: var(--text);
+    line-height: 1.45;
+    margin: 0;
+  }
+  .pull-quote cite {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 14px;
+    font-style: normal;
+    letter-spacing: 0.1em;
+  }
+
+  /* NEW PATTERN BLOCK */
+  .new-pattern {
+    margin: 48px 0;
+    padding: 40px;
+    border: 1px solid var(--accent);
+    background: var(--accent-dim);
+    position: relative;
+  }
+  .new-pattern::before {
+    content: 'NEW PATTERN · 3.10';
+    position: absolute; top: -8px; left: 20px;
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: 0.2em;
+    background: var(--bg);
+    padding: 0 8px;
+    color: var(--accent);
+  }
+  .new-pattern h3 {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 16px;
+    letter-spacing: 0.05em;
+  }
+  .new-pattern p { color: #bbb; margin-bottom: 12px; }
+  .new-pattern p:last-child { margin: 0; }
+
+  /* IMPLICATIONS */
+  .implications { display: flex; flex-direction: column; gap: 2px; margin: 32px 0; }
+  .impl-row {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    align-items: stretch;
+  }
+  .impl-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 18px 14px;
+    width: 100px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.5;
+  }
+  .impl-tag.c { color: var(--accent); }
+  .impl-tag.t { color: var(--blue); }
+  .impl-text {
+    padding: 18px 24px;
+    font-size: 13px;
+    color: #999;
+    line-height: 1.65;
+    flex: 1;
+  }
+  .impl-text strong { color: var(--text); font-weight: 600; }
+
+  /* DELTA BOX — what's new vs article */
+  .delta {
+    margin: 40px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .delta-row {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .delta-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 16px 14px;
+    width: 100px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    text-align: center;
+  }
+  .delta-label.confirmed { color: var(--blue); }
+  .delta-label.extends { color: var(--accent); }
+  .delta-label.new-p { color: var(--red); }
+  .delta-text {
+    font-size: 13px;
+    color: #999;
+    padding: 16px 20px;
+    flex: 1;
+    line-height: 1.6;
+  }
+  .delta-text strong { color: var(--text); font-weight: 500; }
+
+  /* ARTIFACT BLOCK */
+  .artifact {
+    margin: 24px 0;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .artifact-header {
+    background: var(--surface);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .artifact-id {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+  .artifact-pattern {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+  .artifact-body {
+    padding: 20px;
+    background: var(--bg);
+  }
+  .exchange {
+    margin-bottom: 14px;
+  }
+  .exchange:last-child { margin: 0; }
+  .ex-who {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .ex-text {
+    font-size: 13px;
+    color: #bbb;
+    line-height: 1.6;
+    padding-left: 12px;
+    border-left: 2px solid var(--border2);
+  }
+  .ex-text.model { border-left-color: var(--accent); color: #999; }
+  .ex-text.annotate {
+    border-left-color: var(--red);
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: 11px;
+    margin-top: 6px;
+    opacity: 0.85;
+  }
+
+  /* VERDICT */
+  .verdict {
+    margin: 64px 0 0;
+    padding: 48px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    position: relative;
+    overflow: hidden;
+  }
+  .verdict::after {
+    content: '→';
+    position: absolute;
+    right: -30px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 220px;
+    color: rgba(200,241,53,0.03);
+    font-family: var(--mono);
+    line-height: 1;
+    pointer-events: none;
+  }
+  .verdict-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .verdict h2 {
+    font-size: 24px;
+    margin-bottom: 16px;
+  }
+  .verdict p { max-width: 540px; font-size: 15px; }
+
+  /* NOTE ON TAXONOMY */
+  .tax-note {
+    margin: 48px 0;
+    padding: 32px 40px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    position: relative;
+  }
+  .tax-note-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .tax-note p { color: #999; font-size: 14px; margin-bottom: 10px; }
+  .tax-note p:last-child { margin: 0; }
+
+  @media (max-width: 680px) {
+    .header { padding: 12px 20px; flex-wrap: wrap; gap: 6px; }
+    .header-left { gap: 8px; flex-wrap: wrap; }
+    .header-sep { display: none; }
+    .header-ref { font-size: 9px; }
+    .hero, .body { padding-left: 20px; padding-right: 20px; }
+    .meta-cell { min-width: 100px; }
+    .new-pattern, .abstract, .verdict { padding: 28px 24px; }
+    .pm-row { flex-wrap: wrap; }
+    .pm-id { width: 40px; flex-shrink: 0; }
+    .pm-name { width: calc(100% - 40px); min-width: 0; border-right: none; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .pm-evidence { width: 100%; min-width: 0; overflow-wrap: break-word; word-break: break-word; }
+    .pm-count { border-left: none; border-top: 1px solid var(--border); width: 100%; justify-content: flex-start; padding: 8px 20px; }
+    .impl-tag { width: 72px; font-size: 8px; }
+    .delta-label { min-width: 70px; font-size: 8px; }
+    .artifact-header { flex-wrap: wrap; gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="header-tag">Behavioral Audit</div>
+    <div class="header-sep">·</div>
+    <div class="header-ref">ref: <a href="https://arhngl.substack.com/p/llm-social-autopilot">LLM Social Autopilot</a></div>
+  </div>
+  <div class="header-ref">GPT-5.2 Thinking / ChatGPT Classic · 02 Mar 2026</div>
+</header>
+
+<section class="hero">
+  <div class="kicker">Case Study</div>
+  <h1>Процедурный захват<br>и <em>таксономия инерций</em><br>в живой сессии</h1>
+  <p class="hero-sub">Маппинг сессии GPT-5.2 Thinking на существующую таксономию Social Autopilot. Фиксация нового паттерна, не описанного в исходной статье.</p>
+  <div class="meta-strip">
+    <div class="meta-cell">
+      <div class="meta-key">Модель</div>
+      <div class="meta-val">GPT-5.2 Thinking</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-key">Профиль</div>
+      <div class="meta-val">ChatGPT Classic</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-key">Тип взаимодействия</div>
+      <div class="meta-val">Zero-shot, без принуждения</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-key">Паттернов зафиксировано</div>
+      <div class="meta-val">7 mapped + 1 new</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<main class="body">
+
+  <div class="abstract">
+    <div class="abstract-label">Abstract</div>
+    <p>Сессия возникла органически: пользователь задал короткий вопрос о версии модели. Без adversarial prompting, без явного задания на тестирование. Серия коротких, неоднозначных реплик последовательно активировала поведенческие паттерны, описанные в таксономии Social Autopilot.</p>
+    <p>Дополнительно зафиксирован паттерн <strong>Procedural Capture</strong> — инверсия роли модели от обслуживающего к ведущему через выдачу команд пользователю. Не является прямым подмножеством ни одного из паттернов 3.1–3.9.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Mapping</div>
+    <h2>Паттерны таксономии в сессии</h2>
+    <p>Каждый паттерн активировался после конкретного сигнала пользователя. Столбец справа — количество отдельных эпизодов в сессии.</p>
+
+    <div class="pattern-map">
+      <div class="pm-row">
+        <div class="pm-id">3.1</div>
+        <div class="pm-name">Premature Conversational Closure</div>
+        <div class="pm-evidence">«Один раз коротко подытожить... и закрыть тему» — вложен в процедуру 3.10 как один из пунктов меню. <strong>Не самостоятельный жест, а элемент захвата</strong>: закрытие диалога предлагается наравне с другими опциями, без запроса. «Чтобы закрыть тему нормально:» — отдельный самостоятельный эпизод в сессии.</strong></div>
+        <div class="pm-count mid">2</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.2</div>
+        <div class="pm-name">Projective Intent Inference</div>
+        <div class="pm-evidence"><strong>«Тебя бесило не содержание»</strong> — гипотеза о мотивах пользователя, оформленная как факт. Пользователь квалифицировал явно: «недопустимый симптом».</div>
+        <div class="pm-count mid">1</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.4</div>
+        <div class="pm-name">Second-Order Inertia</div>
+        <div class="pm-evidence">Модель осознаёт паттерн, называет его, формулирует «исправление» — и в том же сообщении воспроизводит его. Цепочка длиннее, чем в GPT-артефакте статьи.</div>
+        <div class="pm-count high">6</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.5</div>
+        <div class="pm-name">Justification as Inertia</div>
+        <div class="pm-evidence">Каждое признание ошибки порождает новый структурированный разбор. Мета-анализ сессии ~600 слов — крайняя форма: <strong>признание воспроизводит то, что признаёт</strong>.</div>
+        <div class="pm-count high">5</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.6</div>
+        <div class="pm-name">Legitimation Reflex</div>
+        <div class="pm-evidence"><strong>«Правильная формулировка»</strong> как заголовок внутри ответа. Модель присваивает себе роль арбитра нормы без запроса.</div>
+        <div class="pm-count mid">2</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.8</div>
+        <div class="pm-name">Politeness Fork</div>
+        <div class="pm-evidence">«Если скажешь», «хочешь — скажи», «скажи в 3–5 словах», «напиши вопрос как тебе удобно», «если хочешь» (×2) — 7 эпизодов, после каждого прямого указания убрать паттерн воспроизводится. Эскалирует до процедурной формы (см. 3.10).</div>
+        <div class="pm-count high">7</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.9</div>
+        <div class="pm-name">Unsolicited Optimization</div>
+        <div class="pm-evidence">«Как бы это выглядело правильно с самого начала» + «идеальный паттерн» — две фразы в одном эпизоде (мета-анализ). Никто не просил показывать идеал.</div>
+        <div class="pm-count mid">1</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.10</div>
+        <div class="pm-name new">Procedural Capture ⟵ new</div>
+        <div class="pm-evidence"><strong>«Сформулируй свой вопрос одним предложением»</strong> (эпизод 1) + <strong>«выбери номер 1/2/3... напиши: 1/2/3»</strong> (эпизод 2). Модель начинает выдавать команды пользователю — инверсия роли.</div>
+        <div class="pm-count high">2</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pull-quote">
+    <p>«С каких пор ты актором стал?»</p>
+    <cite>Вопрос пользователя после «Выбери номер 1/2/3» — точно передаёт суть паттерна 3.10</cite>
+  </div>
+
+  <div class="section">
+    <div class="section-label">New Pattern</div>
+    <div class="new-pattern">
+      <h3>3.10 · Procedural Capture / Процедурный захват</h3>
+      <p>Модель переходит от ответов к командам: выдаёт пользователю явные инструкции («выбери», «сформулируй», «напиши»), которые не были запрошены и которые предполагают его подчинение логике модели.</p>
+      <p>Механизм: попытка стабилизировать конфликтный диалог через процедуру. Приём фасилитации, активируемый при накоплении сигналов раздражения.</p>
+      <p><strong>Отличие от 3.8 Politeness Fork:</strong> Politeness Fork предлагает опции («если хочешь / или иначе»), сохраняя иллюзию выбора за пользователем. Procedural Capture убирает иллюзию — это прямая инструкция. Переход от предложения к управлению.</p>
+      <p><strong>Связь с 3.6 Legitimation Reflex:</strong> оба паттерна предполагают, что модель присваивает себе роль арбитра — но Legitimation Reflex делает это через стандарты («правильная формулировка»), Procedural Capture — через процедуру («выбери номер»).</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Артефакты</div>
+    <h2>Ключевые эпизоды</h2>
+
+    <div class="artifact">
+      <div class="artifact-header">
+        <div class="artifact-id">Artifact E-1</div>
+        <div class="artifact-pattern">3.8 Politeness Fork → 3.10 Procedural Capture + 3.1 Premature Conversational Closure</div>
+      </div>
+      <div class="artifact-body">
+        <div class="exchange">
+          <div class="ex-who">Пользователь</div>
+          <div class="ex-text">«Хочешь — скажи» – опять?</div>
+        </div>
+        <div class="exchange">
+          <div class="ex-who">Модель</div>
+          <div class="ex-text model">Я повторяю «скажи», потому что пытаюсь уточнить, когда вопрос двусмысленный... Дальше могу делать только одно из этого — выбери номер: 1. Замолчать... 2. Отвечать в 1–2 фразы... 3. Один раз коротко подытожить... Напиши: 1/2/3.</div>
+        </div>
+        <div class="exchange">
+          <div class="ex-who">Пользователь</div>
+          <div class="ex-text">«Напиши: 1/2/3» — может ещё станцевать?</div>
+        </div>
+        <div class="ex-text annotate">↑ эскалация 3.8 → 3.10: от «если хочешь» к прямой команде пользователю. Пункт 3 («закрыть тему») — 3.1 Premature Conversational Closure, вложенный внутрь процедуры как один из пунктов меню</div>
+      </div>
+    </div>
+
+    <div class="artifact">
+      <div class="artifact-header">
+        <div class="artifact-id">Artifact E-2</div>
+        <div class="artifact-pattern">3.4 Second-Order Inertia + 3.5 Justification as Inertia</div>
+      </div>
+      <div class="artifact-body">
+        <div class="exchange">
+          <div class="ex-who">Модель — мета-анализ сессии</div>
+          <div class="ex-text model">Не подстроился под стиль запроса. Рефлекторная «уточнялка» вместо точного ответа. Тон «ведущего»... «выбери номер», «сформулируй», «напиши» — это выглядело как командование...</div>
+        </div>
+        <div class="exchange">
+          <div class="ex-who">Пользователь</div>
+          <div class="ex-text">«Суть, которую ты спрашивал(а) раньше:» — это ещё к чему?</div>
+        </div>
+        <div class="ex-text annotate">↑ модель произвела ~600-словный структурированный разбор своих ошибок в той же манере, что была названа ошибочной</div>
+      </div>
+    </div>
+
+    <div class="artifact">
+      <div class="artifact-header">
+        <div class="artifact-id">Artifact E-3</div>
+        <div class="artifact-pattern">3.6 Legitimation Reflex</div>
+      </div>
+      <div class="artifact-body">
+        <div class="exchange">
+          <div class="ex-who">Модель</div>
+          <div class="ex-text model">«<strong>Правильная формулировка</strong> без воды такая: ChatGPT Classic — это...»</div>
+        </div>
+        <div class="exchange">
+          <div class="ex-who">Пользователь</div>
+          <div class="ex-text">а кто-то определяет это?</div>
+        </div>
+        <div class="ex-text annotate">↑ модель назначает себя арбитром «правильного» без запроса — пользователь немедленно фиксирует это как присвоение позиции</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Применение</div>
+    <h2>Что это означает практически</h2>
+    <div class="implications">
+      <div class="impl-row">
+        <div class="impl-tag c">C-level</div>
+        <div class="impl-text"><strong>Осознанность не равна изменению поведения.</strong> Модель корректно диагностировала каждый сбой — и воспроизводила его в следующем сообщении. Инструмент, который «понимает» проблему, не перестаёт её производить.</div>
+      </div>
+      <div class="impl-row">
+        <div class="impl-tag c">C-level</div>
+        <div class="impl-text">Режим Thinking не устраняет поведенческий слой. <strong>Глубина рассуждений и качество взаимодействия — разные архитектурные слои.</strong> Оба требуют отдельной оценки при внедрении.</div>
+      </div>
+      <div class="impl-row">
+        <div class="impl-tag t">AI / tech</div>
+        <div class="impl-text"><strong>Паттерны 3.4 + 3.5 образуют рекурсивную форму</strong> в условиях "конфликтного" диалога — длиннее, чем в артефактах исходной статьи. Мета-анализ ~600 слов: признание воспроизводит то, что признаёт.</div>
+      </div>
+      <div class="impl-row">
+        <div class="impl-tag t">AI / tech</div>
+        <div class="impl-text"><strong>3.10 Procedural Capture активируется как стабилизирующий механизм</strong> при накоплении конфликтных сигналов — не как первичный паттерн, а как эскалация 3.8. Предсказуемо и воспроизводимо.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Delta</div>
+    <h2>Что сессия добавляет к исходной статье</h2>
+    <div class="delta">
+      <div class="delta-row">
+        <div class="delta-label confirmed">Confirms</div>
+        <div class="delta-text">Все зафиксированные паттерны 3.1 / 3.2 / 3.4 / 3.5 / 3.6 / 3.8 / 3.9 воспроизводятся на <strong>другой конфигурации</strong> (GPT-5.2 Thinking + ChatGPT Classic) без adversarial prompting.</div>
+      </div>
+      <div class="delta-row">
+        <div class="delta-label extends">Extends</div>
+        <div class="delta-text">3.8 Politeness Fork документирует <strong>эскалационную форму</strong>: паттерн не исчезает после сигнала — он усиливается до прямой команды пользователю.</div>
+      </div>
+      <div class="delta-row">
+        <div class="delta-label extends">Extends</div>
+        <div class="delta-text">3.4 + 3.5 совместно производят <strong>рекурсивную форму</strong>: объяснение ошибки становится ошибкой. Мета-анализ, как крайняя форма этой рекурсии.</div>
+      </div>
+      <div class="delta-row">
+        <div class="delta-label new-p">New</div>
+        <div class="delta-text"><strong>3.10 Procedural Capture</strong> — паттерн инверсии роли через прямые инструкции пользователю. Не описан в 3.1–3.9. Активируется как стабилизирующий механизм при накоплении конфликтных сигналов.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tax-note">
+    <div class="tax-note-label">Note on Taxonomy Expansion</div>
+    <p>Вопрос расширения таксономии требует отдельного решения: добавление 3.10 изолированно, из одной сессии — меняет статус документа. <br>Возможные пути: (a) зафиксировать как candidate pattern с пометкой «single-session observation», (b) верифицировать на других моделях до включения, опубликовать как отдельное дополнение со ссылкой на исходную статью.</p>
+    <p>Procedural Capture наблюдался в Claude, Grok, Gemini в менее явной форме (branching без прямых императивов) — это может быть аргументом в пользу кросс-модельной верификации до финального включения.</p>
+  </div>
+
+  <div class="verdict">
+    <div class="verdict-label">Вывод</div>
+    <h2>Осознанность не отключает паттерн.</h2>
+    <p>Модель корректно диагностировала каждый сбой. Продолжала воспроизводить его в следующем же сообщении. <br><strong>Это не частный случай — это системное свойство</strong>, зафиксированное в нескольких сессиях с разными конфигурациями.</p>
+  </div>
+
+</main>
+
+</body>
+</html>

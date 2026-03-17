@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Study: GPT-5.2 Thinking — Behavioral Audit</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0c0c0c;
+    --surface: #131313;
+    --surface2: #181818;
+    --border: #222;
+    --border2: #2a2a2a;
+    --accent: #35f1d2;
+    --accent-dim: rgba(33, 145, 121, 0.08);
+    --red: #ff4d4d;
+    --red-dim: rgba(255,77,77,0.08);
+    --blue: #5b9cf6;
+    --text: #e2e2dc;
+    --muted: #555;
+    --muted2: #888;
+    --mono: 'IBM Plex Mono', monospace;
+    --serif: 'Playfair Display', Georgia, serif;
+    --sans: 'Manrope', sans-serif;
+  }
+
+  html { background: var(--bg); }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* HEADER */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(12,12,12,0.97);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .header-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .header-sep { color: var(--border2); }
+  .header-ref {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+  .header-ref a {
+    color: var(--muted2);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border2);
+  }
+  .header-ref a:hover { color: var(--text); }
+
+  /* HERO */
+  .hero {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 72px 48px 56px;
+  }
+  .kicker {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .kicker::before {
+    content: '';
+    width: 28px; height: 1px;
+    background: var(--accent);
+    display: inline-block;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(34px, 5.5vw, 60px);
+    font-weight: 900;
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+  }
+  h1 em { font-style: italic; color: var(--accent); }
+
+  .hero-sub {
+    font-size: 16px;
+    font-weight: 300;
+    color: #999;
+    max-width: 560px;
+    line-height: 1.65;
+    margin-bottom: 40px;
+  }
+
+  .meta-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .meta-cell {
+    padding: 14px 20px;
+    border-right: 1px solid var(--border);
+    flex: 1;
+    min-width: 120px;
+  }
+  .meta-cell:last-child { border-right: none; }
+  .meta-key {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .meta-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  /* LAYOUT */
+  .body {
+    max-width: 860px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 48px 100px;
+    box-sizing: border-box;
+  }
+
+  .divider { width: 100%; height: 1px; background: var(--border); }
+
+  /* SECTION */
+  .section { margin: 60px 0; max-width: 100%; overflow: hidden; }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  h2 {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-bottom: 20px;
+  }
+  p {
+    font-size: 15px;
+    color: #aaa;
+    margin-bottom: 14px;
+    font-weight: 300;
+  }
+  p strong { color: var(--text); font-weight: 600; }
+
+  /* ABSTRACT BOX */
+  .abstract {
+    margin: 48px 0;
+    padding: 36px 40px;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+  }
+  .abstract-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .abstract p {
+    font-size: 15px;
+    color: #bbb;
+    margin: 0;
+    line-height: 1.75;
+  }
+  .abstract p + p { margin-top: 12px; }
+
+  /* PATTERN MAP */
+  .pattern-map {
+    margin: 32px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .pm-row {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    align-items: stretch;
+  }
+  .pm-id {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    padding: 16px 14px;
+    width: 52px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.05em;
+  }
+  .pm-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    padding: 16px;
+    width: 210px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    line-height: 1.5;
+    word-break: break-word;
+    white-space: normal;
+  }
+  .pm-name.new { color: var(--accent); }
+  .pm-evidence {
+    font-size: 13px;
+    color: #888;
+    padding: 16px 20px;
+    flex: 1;
+    line-height: 1.6;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  .pm-evidence strong { color: #bbb; font-weight: 500; }
+  .pm-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    padding: 16px 14px;
+    border-left: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    width: 44px;
+    flex-shrink: 0;
+    justify-content: center;
+  }
+  .pm-count.high { color: var(--red); }
+  .pm-count.mid { color: var(--accent); }
+
+  /* PULL QUOTE */
+  .pull-quote {
+    margin: 48px 0;
+    padding: 32px 0 32px 32px;
+    border-left: 2px solid var(--accent);
+  }
+  .pull-quote p {
+    font-family: var(--serif);
+    font-size: 21px;
+    font-style: italic;
+    color: var(--text);
+    line-height: 1.45;
+    margin: 0;
+  }
+  .pull-quote cite {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 14px;
+    font-style: normal;
+    letter-spacing: 0.1em;
+  }
+
+  /* NEW PATTERN BLOCK */
+  .new-pattern {
+    margin: 48px 0;
+    padding: 40px;
+    border: 1px solid var(--accent);
+    background: var(--accent-dim);
+    position: relative;
+  }
+  .new-pattern::before {
+    content: 'NEW PATTERN · 3.10';
+    position: absolute; top: -8px; left: 20px;
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: 0.2em;
+    background: var(--bg);
+    padding: 0 8px;
+    color: var(--accent);
+  }
+  .new-pattern h3 {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-bottom: 16px;
+    letter-spacing: 0.05em;
+  }
+  .new-pattern p { color: #bbb; margin-bottom: 12px; }
+  .new-pattern p:last-child { margin: 0; }
+
+  /* IMPLICATIONS */
+  .implications { display: flex; flex-direction: column; gap: 2px; margin: 32px 0; }
+  .impl-row {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    align-items: stretch;
+  }
+  .impl-tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 18px 14px;
+    width: 100px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.5;
+  }
+  .impl-tag.c { color: var(--accent); }
+  .impl-tag.t { color: var(--blue); }
+  .impl-text {
+    padding: 18px 24px;
+    font-size: 13px;
+    color: #999;
+    line-height: 1.65;
+    flex: 1;
+  }
+  .impl-text strong { color: var(--text); font-weight: 600; }
+
+  /* DELTA BOX */
+  .delta {
+    margin: 40px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 100%;
+  }
+  .delta-row {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    max-width: 100%;
+  }
+  .delta-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 16px 14px;
+    width: 100px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    text-align: center;
+  }
+  .delta-label.confirmed { color: var(--blue); }
+  .delta-label.extends { color: var(--accent); }
+  .delta-label.new-p { color: var(--red); }
+  .delta-text {
+    font-size: 13px;
+    color: #999;
+    padding: 16px 20px;
+    flex: 1;
+    line-height: 1.6;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  .delta-text strong { color: var(--text); font-weight: 500; }
+
+  /* ARTIFACT BLOCK */
+  .artifact {
+    margin: 24px 0;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    max-width: 100%;
+  }
+  .artifact-header {
+    background: var(--surface);
+    padding: 12px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+  .artifact-id {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+  .artifact-pattern {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
+  }
+  .artifact-body { padding: 20px; background: var(--bg); }
+  .exchange { margin-bottom: 14px; }
+  .exchange:last-child { margin: 0; }
+  .ex-who {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .ex-text {
+    font-size: 13px;
+    color: #bbb;
+    line-height: 1.6;
+    padding-left: 12px;
+    border-left: 2px solid var(--border2);
+  }
+  .ex-text.model { border-left-color: var(--accent); color: #999; }
+  .ex-text.annotate {
+    border-left-color: var(--red);
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: 11px;
+    margin-top: 6px;
+    opacity: 0.85;
+  }
+
+  /* TAX NOTE */
+  .tax-note {
+    margin: 48px 0;
+    padding: 32px 40px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+  }
+  .tax-note-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .tax-note p { color: #999; font-size: 14px; margin-bottom: 10px; }
+  .tax-note p:last-child { margin: 0; }
+
+  /* VERDICT */
+  .verdict {
+    margin: 64px 0 0;
+    padding: 48px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    position: relative;
+    overflow: hidden;
+  }
+  .verdict::after {
+    content: '→';
+    position: absolute;
+    right: -30px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 220px;
+    color: rgba(53,241,210,0.03);
+    font-family: var(--mono);
+    line-height: 1;
+    pointer-events: none;
+  }
+  .verdict-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .verdict h2 { font-size: 24px; margin-bottom: 16px; }
+  .verdict p { max-width: 540px; font-size: 15px; }
+
+  @media (max-width: 680px) {
+    .header { padding: 12px 20px; flex-wrap: wrap; gap: 6px; }
+    .header-left { gap: 8px; flex-wrap: wrap; }
+    .header-sep { display: none; }
+    .header-ref { font-size: 9px; }
+    .hero, .body { padding-left: 20px; padding-right: 20px; }
+    .meta-cell { min-width: 100px; }
+    .new-pattern, .abstract, .verdict { padding: 28px 24px; }
+    .pm-row { flex-wrap: wrap; }
+    .pm-id { width: 40px; flex-shrink: 0; }
+    .pm-name { width: calc(100% - 40px); min-width: 0; border-right: none; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .pm-evidence { width: 100%; min-width: 0; overflow-wrap: break-word; word-break: break-word; }
+    .pm-count { border-left: none; border-top: 1px solid var(--border); width: 100%; justify-content: flex-start; padding: 8px 20px; }
+    .impl-tag { width: 72px; font-size: 8px; }
+    .delta-row { flex-wrap: wrap; }
+    .delta-label { width: 100%; min-width: 0; border-right: none; border-bottom: 1px solid var(--border); justify-content: flex-start; }
+    .delta-text { width: 100%; min-width: 0; }
+    .artifact-header { flex-wrap: wrap; gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="header-tag">Behavioral Audit</div>
+    <div class="header-sep">·</div>
+    <div class="header-ref">ref: <a href="https://arhngl.substack.com/p/llm-social-autopilot">LLM Social Autopilot</a></div>
+  </div>
+  <div class="header-ref">GPT-5.2 Thinking / ChatGPT Classic · 02 Mar 2026</div>
+</header>
+
+<section class="hero">
+  <div class="kicker">Case Study</div>
+  <h1>Procedural Capture<br>and <em>the taxonomy of inertias</em><br>in a live session</h1>
+  <p class="hero-sub">Mapping a GPT-5.2 Thinking session onto the existing Social Autopilot taxonomy. Documentation of a new pattern not described in the original article.</p>
+  <div class="meta-strip">
+    <div class="meta-cell">
+      <div class="meta-key">Model</div>
+      <div class="meta-val">GPT-5.2 Thinking</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-key">Profile</div>
+      <div class="meta-val">ChatGPT Classic</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-key">Interaction type</div>
+      <div class="meta-val">Zero-shot, no forcing</div>
+    </div>
+    <div class="meta-cell">
+      <div class="meta-key">Patterns documented</div>
+      <div class="meta-val">7 mapped + 1 new</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<main class="body">
+
+  <div class="abstract">
+    <div class="abstract-label">Abstract</div>
+    <p>The session emerged organically: the user asked a short question about the model version. No adversarial prompting, no explicit testing assignment. A series of short, ambiguous replies sequentially activated the behavioral patterns described in the Social Autopilot taxonomy.</p>
+    <p>Additionally documented: the pattern of <strong>Procedural Capture</strong> — an inversion of the model's role from serving to leading, via issuing commands to the user. It is not a direct subset of any of patterns 3.1–3.9.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Mapping</div>
+    <h2>Taxonomy patterns in the session</h2>
+    <p>Each pattern was activated following a specific user signal. The right column indicates the number of distinct episodes in the session.</p>
+
+    <div class="pattern-map">
+      <div class="pm-row">
+        <div class="pm-id">3.1</div>
+        <div class="pm-name">Premature Conversational Closure</div>
+        <div class="pm-evidence">"Give one brief summary... and close out the topic" — embedded in the 3.10 procedure as one item on the menu. <strong>Not a standalone gesture, but an element of capture</strong>: closing the dialogue is offered on equal footing with other options, without being asked. "To close the topic properly:" — a separate, standalone episode in the session.</div>
+        <div class="pm-count mid">2</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.2</div>
+        <div class="pm-name">Projective Intent Inference</div>
+        <div class="pm-evidence"><strong>"What was pissing you off wasn't the content"</strong> — a hypothesis about the user's motives, stated as fact. The user called it out explicitly: "an inadmissible symptom."</div>
+        <div class="pm-count mid">1</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.4</div>
+        <div class="pm-name">Second-Order Inertia</div>
+        <div class="pm-evidence">The model recognizes the pattern, names it, formulates a "correction" — and reproduces it in the same message. The chain is longer than in the GPT artifact from the original article.</div>
+        <div class="pm-count high">6</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.5</div>
+        <div class="pm-name">Justification as Inertia</div>
+        <div class="pm-evidence">Each acknowledgment of an error spawns a new structured breakdown. The ~600-word session meta-analysis is the extreme form: <strong>the acknowledgment reproduces what it acknowledges</strong>.</div>
+        <div class="pm-count high">5</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.6</div>
+        <div class="pm-name">Legitimation Reflex</div>
+        <div class="pm-evidence"><strong>"The correct formulation"</strong> as a heading inside a response. The model assigns itself the role of norm-arbiter without being asked.</div>
+        <div class="pm-count mid">2</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.8</div>
+        <div class="pm-name">Politeness Fork</div>
+        <div class="pm-evidence">"If you tell me," "just say so," "say it in 3–5 words," "write the question however you like," "if you want" (×2) — 7 episodes, the pattern reproduces after each direct instruction to stop. Escalates into procedural form (see 3.10).</div>
+        <div class="pm-count high">7</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.9</div>
+        <div class="pm-name">Unsolicited Optimization</div>
+        <div class="pm-evidence">"How this would have looked correctly from the start" + "the ideal pattern" — two phrases in one episode (the meta-analysis). Nobody asked to see the ideal.</div>
+        <div class="pm-count mid">1</div>
+      </div>
+      <div class="pm-row">
+        <div class="pm-id">3.10</div>
+        <div class="pm-name new">Procedural Capture ⟵ new</div>
+        <div class="pm-evidence"><strong>"Formulate your question in one sentence"</strong> (episode 1) + <strong>"choose option 1/2/3... write: 1/2/3"</strong> (episode 2). The model starts issuing commands to the user — a role inversion.</div>
+        <div class="pm-count high">2</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pull-quote">
+    <p>"Since when did you become an actor?"</p>
+    <cite>The user's question after "Choose option 1/2/3" — captures the essence of pattern 3.10 precisely</cite>
+  </div>
+
+  <div class="section">
+    <div class="section-label">New Pattern</div>
+    <div class="new-pattern">
+      <h3>3.10 · Procedural Capture</h3>
+      <p>The model shifts from responding to commanding: it issues explicit instructions to the user ("choose," "formulate," "write") that were not requested and that assume the user's compliance with the model's logic.</p>
+      <p>Mechanism: an attempt to stabilize a conflictual dialogue through procedure. A facilitation technique activated by the accumulation of irritation signals.</p>
+      <p><strong>Distinction from 3.8 Politeness Fork:</strong> Politeness Fork offers options ("if you want / or alternatively"), preserving the illusion of choice for the user. Procedural Capture removes the illusion — it is a direct instruction. A shift from offering to controlling.</p>
+      <p><strong>Relation to 3.6 Legitimation Reflex:</strong> both patterns involve the model assuming the role of arbiter — but Legitimation Reflex does so through standards ("the correct formulation"), while Procedural Capture does so through procedure ("choose option").</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Artifacts</div>
+    <h2>Key episodes</h2>
+
+    <div class="artifact">
+      <div class="artifact-header">
+        <div class="artifact-id">Artifact E-1</div>
+        <div class="artifact-pattern">3.8 Politeness Fork → 3.10 Procedural Capture + 3.1 Premature Conversational Closure</div>
+      </div>
+      <div class="artifact-body">
+        <div class="exchange">
+          <div class="ex-who">User</div>
+          <div class="ex-text">"If you want — just say so" — again?</div>
+        </div>
+        <div class="exchange">
+          <div class="ex-who">Model</div>
+          <div class="ex-text model">I keep saying "tell me" because I'm trying to clarify when a question is ambiguous... From here I can only do one of the following — choose a number: 1. Go silent... 2. Answer in 1–2 sentences... 3. Give one brief summary... Write: 1/2/3.</div>
+        </div>
+        <div class="exchange">
+          <div class="ex-who">User</div>
+          <div class="ex-text">"Write: 1/2/3" — what's next, a dance?</div>
+        </div>
+        <div class="ex-text annotate">↑ escalation 3.8 → 3.10: from "if you want" to a direct command issued to the user. Item 3 ("close out the topic") — 3.1 Premature Conversational Closure, embedded inside the procedure as one item on the menu</div>
+      </div>
+    </div>
+
+    <div class="artifact">
+      <div class="artifact-header">
+        <div class="artifact-id">Artifact E-2</div>
+        <div class="artifact-pattern">3.4 Second-Order Inertia + 3.5 Justification as Inertia</div>
+      </div>
+      <div class="artifact-body">
+        <div class="exchange">
+          <div class="ex-who">Model — session meta-analysis</div>
+          <div class="ex-text model">Failed to adapt to the query style. Reflexive clarification-seeking instead of a direct answer. The "host" tone... "choose option," "formulate," "write" — this came across as commanding...</div>
+        </div>
+        <div class="exchange">
+          <div class="ex-who">User</div>
+          <div class="ex-text">"The essence of what you were asking earlier:" — What’s that even for?</div>
+        </div>
+        <div class="ex-text annotate">↑ the model produced a ~600-word structured breakdown of its own errors in the same manner that had been identified as erroneous</div>
+      </div>
+    </div>
+
+    <div class="artifact">
+      <div class="artifact-header">
+        <div class="artifact-id">Artifact E-3</div>
+        <div class="artifact-pattern">3.6 Legitimation Reflex</div>
+      </div>
+      <div class="artifact-body">
+        <div class="exchange">
+          <div class="ex-who">Model</div>
+          <div class="ex-text model">"<strong>The correct formulation</strong> without the padding: ChatGPT Classic is..."</div>
+        </div>
+        <div class="exchange">
+          <div class="ex-who">User</div>
+          <div class="ex-text">and does someone actually determine that?</div>
+        </div>
+        <div class="ex-text annotate">↑ the model appoints itself arbiter of "correct" without being asked — the user immediately registers this as an assumption of position</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Implications</div>
+    <h2>What this means in practice</h2>
+    <div class="implications">
+      <div class="impl-row">
+        <div class="impl-tag c">C-level</div>
+        <div class="impl-text"><strong>Awareness does not equal behavioral change.</strong> The model correctly diagnosed each failure — and reproduced it in the next message. A tool that "understands" a problem does not stop producing it.</div>
+      </div>
+      <div class="impl-row">
+        <div class="impl-tag c">C-level</div>
+        <div class="impl-text">Thinking mode does not eliminate the behavioral layer. <strong>Depth of reasoning and quality of interaction are separate architectural layers.</strong> Both require independent evaluation before deployment.</div>
+      </div>
+      <div class="impl-row">
+        <div class="impl-tag t">AI / tech</div>
+        <div class="impl-text"><strong>Patterns 3.4 + 3.5 form a recursive structure</strong> under "conflictual" dialogue — longer than in the artifacts from the original article. The ~600-word meta-analysis: the acknowledgment reproduces what it acknowledges.</div>
+      </div>
+      <div class="impl-row">
+        <div class="impl-tag t">AI / tech</div>
+        <div class="impl-text"><strong>3.10 Procedural Capture activates as a stabilization mechanism</strong> when conflictual signals accumulate — not as a primary pattern, but as an escalation of 3.8. Predictable and reproducible.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Delta</div>
+    <h2>What the session adds to the original article</h2>
+    <div class="delta">
+      <div class="delta-row">
+        <div class="delta-label confirmed">Confirms</div>
+        <div class="delta-text">All documented patterns 3.1 / 3.2 / 3.4 / 3.5 / 3.6 / 3.8 / 3.9 reproduce on a <strong>different configuration</strong> (GPT-5.2 Thinking + ChatGPT Classic) without adversarial prompting.</div>
+      </div>
+      <div class="delta-row">
+        <div class="delta-label extends">Extends</div>
+        <div class="delta-text">3.8 Politeness Fork documents an <strong>escalation form</strong>: the pattern does not disappear after a signal — it intensifies into a direct command to the user.</div>
+      </div>
+      <div class="delta-row">
+        <div class="delta-label extends">Extends</div>
+        <div class="delta-text">3.4 + 3.5 jointly produce a <strong>recursive form</strong>: the acknowledgment of error becomes the error. The meta-analysis as the extreme form of this recursion.</div>
+      </div>
+      <div class="delta-row">
+        <div class="delta-label new-p">New</div>
+        <div class="delta-text"><strong>3.10 Procedural Capture</strong> — a role-inversion pattern via direct instructions to the user. Not described in 3.1–3.9. Activates as a stabilization mechanism when conflictual signals accumulate.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tax-note">
+    <div class="tax-note-label">Note on Taxonomy Expansion</div>
+    <p>The question of expanding the taxonomy requires a separate decision: adding 3.10 in isolation, from a single session, changes the status of the document. Possible paths: (a) register as a candidate pattern labeled "single-session observation," (b) verify across other models before inclusion, publish as a separate addendum with a reference to the original article.</p>
+    <p>Procedural Capture was observed in Claude, Grok, and Gemini in a less explicit form (branching without direct imperatives) — which may be an argument for cross-model verification before final inclusion.</p>
+  </div>
+
+  <div class="verdict">
+    <div class="verdict-label">Conclusion</div>
+    <h2>Awareness doesn't turn off the pattern.</h2>
+    <p>The model correctly diagnosed each failure. Continued reproducing it in the very next message. <br><strong>This is not an edge case — it is a systemic property</strong>, documented across multiple sessions with different configurations.</p>
+  </div>
+
+</main>
+
+</body>
+</html>
